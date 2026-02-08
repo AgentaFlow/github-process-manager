@@ -1,0 +1,159 @@
+{
+  "templates": {
+    "sox_audit": {
+      "name": "SOX Audit Report",
+      "description": "SOX compliance and internal control testing documentation",
+      "sections": [
+        {
+          "number": 1,
+          "title": "Control Objective",
+          "key": "Control Objective",
+          "description": "Primary objective and purpose of the control"
+        },
+        {
+          "number": 2,
+          "title": "Risks Addressed",
+          "key": "Risks Addressed",
+          "description": "Specific risks mitigated by this control"
+        },
+        {
+          "number": 3,
+          "title": "Testing Procedures",
+          "key": "Testing Procedures",
+          "description": "Methods used to test control effectiveness"
+        },
+        {
+          "number": 4,
+          "title": "Test Results and Findings",
+          "key": "Test Results and Findings",
+          "description": "Outcomes of testing and any identified issues"
+        },
+        {
+          "number": 5,
+          "title": "Conclusion and Recommendation",
+          "key": "Conclusion and Recommendation",
+          "description": "Overall assessment and recommended actions"
+        }
+      ],
+      "report_title": "SOX Control Analysis Report",
+      "keywords": ["sox", "control", "audit", "compliance", "internal control"]
+    },
+    "mlops_workflow": {
+      "name": "MLOps Workflow Documentation",
+      "description": "Machine learning operations and model lifecycle documentation",
+      "sections": [
+        {
+          "number": 1,
+          "title": "Model Overview",
+          "key": "Model Overview",
+          "description": "Model architecture, purpose, and business context"
+        },
+        {
+          "number": 2,
+          "title": "Data Pipeline",
+          "key": "Data Pipeline",
+          "description": "Data sources, preprocessing, and feature engineering"
+        },
+        {
+          "number": 3,
+          "title": "Training Process",
+          "key": "Training Process",
+          "description": "Training methodology, hyperparameters, and infrastructure"
+        },
+        {
+          "number": 4,
+          "title": "Validation Results",
+          "key": "Validation Results",
+          "description": "Model performance metrics and evaluation results"
+        },
+        {
+          "number": 5,
+          "title": "Deployment Plan",
+          "key": "Deployment Plan",
+          "description": "Deployment strategy, monitoring, and rollback procedures"
+        }
+      ],
+      "report_title": "MLOps Workflow Documentation",
+      "keywords": ["model", "mlops", "machine learning", "training", "inference", "dataset"]
+    },
+    "devops_pipeline": {
+      "name": "DevOps Pipeline Documentation",
+      "description": "CI/CD pipeline and deployment process documentation",
+      "sections": [
+        {
+          "number": 1,
+          "title": "Pipeline Overview",
+          "key": "Pipeline Overview",
+          "description": "Pipeline purpose, stages, and architecture"
+        },
+        {
+          "number": 2,
+          "title": "Build Steps",
+          "key": "Build Steps",
+          "description": "Compilation, packaging, and artifact creation"
+        },
+        {
+          "number": 3,
+          "title": "Test and Quality Gates",
+          "key": "Test and Quality Gates",
+          "description": "Testing strategies and quality assurance checks"
+        },
+        {
+          "number": 4,
+          "title": "Deployment Process",
+          "key": "Deployment Process",
+          "description": "Deployment stages, environments, and promotion strategy"
+        },
+        {
+          "number": 5,
+          "title": "Monitoring and Rollback",
+          "key": "Monitoring and Rollback",
+          "description": "Observability, alerting, and rollback procedures"
+        }
+      ],
+      "report_title": "DevOps Pipeline Documentation",
+      "keywords": ["pipeline", "ci/cd", "cicd", "deployment", "build", "release", "kubernetes", "docker"]
+    },
+    "generic": {
+      "name": "Generic Process Documentation",
+      "description": "General purpose process and analysis documentation",
+      "sections": [
+        {
+          "number": 1,
+          "title": "Overview",
+          "key": "Overview",
+          "description": "Process background and context"
+        },
+        {
+          "number": 2,
+          "title": "Key Components",
+          "key": "Key Components",
+          "description": "Main elements and stakeholders"
+        },
+        {
+          "number": 3,
+          "title": "Procedures",
+          "key": "Procedures",
+          "description": "Step-by-step process flow and requirements"
+        },
+        {
+          "number": 4,
+          "title": "Analysis Results",
+          "key": "Analysis Results",
+          "description": "Findings, metrics, and observations"
+        },
+        {
+          "number": 5,
+          "title": "Conclusion and Recommendations",
+          "key": "Conclusion and Recommendations",
+          "description": "Summary and actionable next steps"
+        }
+      ],
+      "report_title": "Process Analysis Report",
+      "keywords": []
+    }
+  },
+  "default_template": "generic",
+  "version": "1.0",
+  "last_updated": "2026-02-07"
+}

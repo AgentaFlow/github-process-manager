@@ -8,56 +8,91 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from datetime import datetime
 import os
 import re
+import json
 from logger import logger
+from config import Config
+
+# Load document templates
+DOCUMENT_TEMPLATES = {}
+
+def load_templates():
+    """Load document templates from JSON file."""
+    global DOCUMENT_TEMPLATES
+    try:
+        template_path = Config.DOCUMENT_TEMPLATES_PATH
+        if os.path.exists(template_path):
+            with open(template_path, 'r') as f:
+                data = json.load(f)
+                DOCUMENT_TEMPLATES = data.get('templates', {})
+            logger.info(f"Loaded {len(DOCUMENT_TEMPLATES)} document templates")
+        else:
+            logger.warning(f"Template file not found: {template_path}. Using defaults.")
+            # Set default templates if file doesn't exist
+            DOCUMENT_TEMPLATES = {
+                'generic': {
+                    'name': 'Generic Process Documentation',
+                    'report_title': 'Process Analysis Report',
+                    'sections': [
+                        {'number': 1, 'title': 'Overview', 'key': 'Overview'},
+                        {'number': 2, 'title': 'Key Components', 'key': 'Key Components'},
+                        {'number': 3, 'title': 'Procedures', 'key': 'Procedures'},
+                        {'number': 4, 'title': 'Analysis Results', 'key': 'Analysis Results'},
+                        {'number': 5, 'title': 'Conclusion and Recommendations', 'key': 'Conclusion and Recommendations'}
+                    ]
+                }
+            }
+    except Exception as e:
+        logger.error(f"Error loading document templates: {e}")
+        DOCUMENT_TEMPLATES = {}
+
+# Load templates on module initialization
+load_templates()
 
 
-def parse_analysis_sections(analysis_text):
+def parse_analysis_sections(analysis_text, template_type='generic'):
     """
-    Parse the chatbot response into structured sections.
-    
-    Sections:
-    1. Control Objective (or Model Overview, Pipeline Overview, etc.)
-    2. Risks Addressed (or Data Pipeline, Build Steps, etc.)
-    3. Testing Procedures
-    4. Test Results and Findings
-    5. Conclusion and Recommendation
+    Parse the chatbot response into structured sections based on template type.
     
     Args:
         analysis_text (str): Full chatbot response text
+        template_type (str): Template type (sox_audit, mlops_workflow, devops_pipeline, generic)
         
     Returns:
         dict: Dictionary with section titles as keys and content as values
     """
-    sections = {
-        'Control Objective': '',
-        'Risks Addressed': '',
-        'Testing Procedures': '',
-        'Test Results and Findings': '',
-        'Conclusion and Recommendation': ''
-    }
+    # Get template configuration
+    template = DOCUMENT_TEMPLATES.get(template_type, DOCUMENT_TEMPLATES.get('generic'))
+    if not template:
+        logger.warning(f"Template '{template_type}' not found, using basic parsing")
+        return {'Overview': analysis_text}
     
-    # Try to parse using section markers
-    patterns = [
-        (r'1\.\s*Control Objective[:\s]*(.*?)(?=2\.\s*Risks|$)', 'Control Objective'),
-        (r'2\.\s*Risks Addressed[:\s]*(.*?)(?=3\.\s*Testing|$)', 'Risks Addressed'),
-        (r'3\.\s*Testing Procedures[:\s]*(.*?)(?=4\.\s*Test Results|4\.\s*Results|$)', 'Testing Procedures'),
-        (r'4\.\s*(?:Test Results and Findings|Results)[:\s]*(.*?)(?=5\.\s*Conclusion|$)', 'Test Results and Findings'),
-        (r'5\.\s*(?:Conclusion and Recommendation|Conclusion)[:\s]*(.*?)$', 'Conclusion and Recommendation')
-    ]
+    sections = {section['key']: '' for section in template['sections']}
     
-    for pattern, section_name in patterns:
+    # Build regex patterns for each section
+    for i, section in enumerate(template['sections']):
+        section_num = section['number']
+        section_key = section['key']
+        
+        # Look for next section or end of text
+        if i < len(template['sections']) - 1:
+            next_section_num = template['sections'][i + 1]['number']
+            pattern = rf'{section_num}\.\s*{re.escape(section_key)}[:\s]*(.*?)(?={next_section_num}\.|$)'
+        else:
+            pattern = rf'{section_num}\.\s*{re.escape(section_key)}[:\s]*(.*?)$'
+        
         match = re.search(pattern, analysis_text, re.DOTALL | re.IGNORECASE)
         if match:
-            sections[section_name] = match.group(1).strip()
+            sections[section_key] = match.group(1).strip()
     
-    # If no sections were parsed, use the full text as a general control analysis
+    # If no sections were parsed, use the full text in the first section
     if not any(sections.values()):
-        sections['Control Objective'] = analysis_text
+        first_section_key = template['sections'][0]['key']
+        sections[first_section_key] = analysis_text
     
     return sections
 
 
-def create_process_document(analysis_text, process_name='Process Analysis', metadata=None):
+def create_process_document(analysis_text, process_name='Process Analysis', metadata=None, template_type=None):
     """
     Generate Process Analysis Word document.
     
@@ -71,6 +106,7 @@ def create_process_document(analysis_text, process_name='Process Analysis', meta
         analysis_text (str): The chatbot's analysis response
         process_name (str): Name of the process being analyzed
         metadata (dict): Optional metadata (timestamp, query, user)
+        template_type (str): Template type (sox_audit, mlops_workflow, devops_pipeline, generic)
         
     Returns:
         str: Filename of the generated document
@@ -79,8 +115,22 @@ def create_process_document(analysis_text, process_name='Process Analysis', meta
         # Create generated_reports directory if it doesn't exist
         os.makedirs('generated_reports', exist_ok=True)
         
+        # Determine template type
+        if template_type is None:
+            template_type = Config.DEFAULT_TEMPLATE_TYPE
+        
+        # Get template configuration
+        template = DOCUMENT_TEMPLATES.get(template_type, DOCUMENT_TEMPLATES.get('generic'))
+        if not template:
+            logger.error(f"Template '{template_type}' not found")
+            template_type = 'generic'
+            template = DOCUMENT_TEMPLATES.get('generic', {
+                'report_title': 'Process Analysis Report',
+                'sections': []
+            })
+        
         # Parse sections from the analysis text
-        sections = parse_sox_sections(analysis_text)
+        sections = parse_analysis_sections(analysis_text, template_type)
         
         # Create new document
         doc = Document()
@@ -91,26 +141,43 @@ def create_process_document(analysis_text, process_name='Process Analysis', meta
         font.name = 'Calibri'
         font.size = Pt(11)
         
+        # Get branding configuration
+        project_name = Config.PROJECT_NAME
+        company_name = Config.COMPANY_NAME
+        brand_rgb = Config.get_brand_color_rgb()
+        
         # Add header with project branding
         header_section = doc.sections[0]
         header = header_section.header
         header_para = header.paragraphs[0]
-        header_para.text = 'GitHub Process Manager | Process Documentation'
+        if company_name:
+            header_para.text = f'{company_name} | {project_name} | Process Documentation'
+        else:
+            header_para.text = f'{project_name} | Process Documentation'
         header_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         header_run = header_para.runs[0]
         header_run.font.size = Pt(10)
-        header_run.font.color.rgb = RGBColor(74, 144, 226)  # Professional blue (#4A90E2)
+        header_run.font.color.rgb = RGBColor(*brand_rgb)
+        
+        # Add logo if configured
+        if Config.DOCUMENT_LOGO_PATH and os.path.exists(Config.DOCUMENT_LOGO_PATH):
+            try:
+                header_para.add_run()
+                header_para.add_run().add_picture(Config.DOCUMENT_LOGO_PATH, width=Inches(0.5))
+            except Exception as e:
+                logger.warning(f"Could not add logo to document: {e}")
         
         # Add title
-        title = doc.add_heading('Process Analysis Report', 0)
+        report_title = template.get('report_title', 'Process Analysis Report')
+        title = doc.add_heading(report_title, 0)
         title.alignment = WD_ALIGN_PARAGRAPH.CENTER
         title_run = title.runs[0]
-        title_run.font.color.rgb = RGBColor(74, 144, 226)  # Professional blue (#4A90E2)
+        title_run.font.color.rgb = RGBColor(*brand_rgb)
         title_run.font.size = Pt(18)
         
         # Add process name
         process_heading = doc.add_heading(process_name, level=2)
-        control_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        process_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
         
         doc.add_paragraph()  # Spacing
         
@@ -126,7 +193,7 @@ def create_process_document(analysis_text, process_name='Process Analysis', meta
             info_table.cell(1, 1).text = metadata.get('query', 'N/A')
             
             info_table.cell(2, 0).text = 'Report Type:'
-            info_table.cell(2, 1).text = 'Process Analysis Documentation'
+            info_table.cell(2, 1).text = template.get('name', 'Process Analysis Documentation')
             
             doc.add_paragraph()  # Spacing
         
@@ -134,20 +201,17 @@ def create_process_document(analysis_text, process_name='Process Analysis', meta
         doc.add_paragraph('_' * 80)
         doc.add_paragraph()
         
-        # Add the 5 sections
-        section_titles = [
-            ('1. Control Objective', 'Control Objective'),
-            ('2. Risks Addressed', 'Risks Addressed'),
-            ('3. Testing Procedures', 'Testing Procedures'),
-            ('4. Test Results and Findings', 'Test Results and Findings'),
-            ('5. Conclusion and Recommendation', 'Conclusion and Recommendation')
-        ]
-        
-        for title_text, section_key in section_titles:
+        # Add the sections based on template
+        for section_config in template.get('sections', []):
+            section_num = section_config['number']
+            section_title = section_config['title']
+            section_key = section_config['key']
+            
             # Add section heading
-            section_heading = doc.add_heading(title_text, level=1)
+            heading_text = f"{section_num}. {section_title}"
+            section_heading = doc.add_heading(heading_text, level=1)
             section_run = section_heading.runs[0]
-            section_run.font.color.rgb = RGBColor(74, 144, 226)  # Professional blue (#4A90E2)
+            section_run.font.color.rgb = RGBColor(*brand_rgb)
             section_run.font.size = Pt(14)
             
             # Add section content
@@ -294,6 +358,11 @@ def cleanup_old_reports(hours=24):
 def create_sox_word_document(analysis_text, control_name='SOX Control Analysis', metadata=None):
     """
     Legacy function for backward compatibility.
-    Calls create_process_document with renamed parameters.
+    Calls create_process_document with SOX template type.
     """
-    return create_process_document(analysis_text, process_name=control_name, metadata=metadata)
+    return create_process_document(
+        analysis_text, 
+        process_name=control_name, 
+        metadata=metadata,
+        template_type='sox_audit'
+    )

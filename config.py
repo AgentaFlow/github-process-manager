@@ -51,6 +51,14 @@ class Config:
     SYSTEM_PROMPT_TEMPLATE = os.getenv('SYSTEM_PROMPT_TEMPLATE', 'default')
     CUSTOM_SYSTEM_PROMPT = os.getenv('CUSTOM_SYSTEM_PROMPT', '')
     
+    # Document Template Configuration (Phase 3)
+    PROJECT_NAME = os.getenv('PROJECT_NAME', 'GitHub Process Manager')
+    COMPANY_NAME = os.getenv('COMPANY_NAME', '')
+    BRAND_COLOR = os.getenv('BRAND_COLOR', '#4A90E2')
+    DOCUMENT_LOGO_PATH = os.getenv('DOCUMENT_LOGO_PATH', '')
+    DEFAULT_TEMPLATE_TYPE = os.getenv('DEFAULT_TEMPLATE_TYPE', 'generic')
+    DOCUMENT_TEMPLATES_PATH = os.getenv('DOCUMENT_TEMPLATES_PATH', 'document_templates.json')
+    
     # Pre-defined System Prompt Templates
     SYSTEM_PROMPTS = {
         'default': (
@@ -99,6 +107,33 @@ class Config:
     }
     
     @staticmethod
+    def validate_color_format(color_string):
+        """Validate hex color format (#RRGGBB)."""
+        import re
+        if not color_string:
+            return True  # Empty is allowed
+        pattern = r'^#[0-9A-Fa-f]{6}$'
+        return bool(re.match(pattern, color_string))
+    
+    @staticmethod
+    def validate_logo_path(logo_path):
+        """Validate logo file exists if path is provided."""
+        if not logo_path:
+            return True  # Empty is allowed
+        if os.path.exists(logo_path):
+            # Check if it's an image file
+            valid_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.bmp'}
+            _, ext = os.path.splitext(logo_path)
+            if ext.lower() in valid_extensions:
+                return True
+            else:
+                logger.warning(f"Logo file {logo_path} has unsupported format. Use: {valid_extensions}")
+                return False
+        else:
+            logger.warning(f"Logo file not found: {logo_path}")
+            return False
+    
+    @staticmethod
     def validate():
         """Validate critical configuration settings."""
         errors = []
@@ -112,6 +147,20 @@ class Config:
         if not Config.GITHUB_REPO_URL:
             logger.warning("GITHUB_REPO_URL is not set. Please configure it to use GitHub features.")
         
+        # Validate brand color format
+        if not Config.validate_color_format(Config.BRAND_COLOR):
+            errors.append(f"BRAND_COLOR '{Config.BRAND_COLOR}' is not a valid hex color (format: #RRGGBB)")
+        
+        # Validate logo path if provided
+        if Config.DOCUMENT_LOGO_PATH and not Config.validate_logo_path(Config.DOCUMENT_LOGO_PATH):
+            logger.warning(f"DOCUMENT_LOGO_PATH is set but invalid. Logo will be skipped.")
+        
+        # Validate template type
+        valid_templates = {'sox_audit', 'mlops_workflow', 'devops_pipeline', 'generic'}
+        if Config.DEFAULT_TEMPLATE_TYPE not in valid_templates:
+            logger.warning(f"DEFAULT_TEMPLATE_TYPE '{Config.DEFAULT_TEMPLATE_TYPE}' not recognized. Using 'generic'.")
+            Config.DEFAULT_TEMPLATE_TYPE = 'generic'
+        
         if errors:
             error_msg = "\n".join(errors)
             logger.error(f"Configuration validation failed:\n{error_msg}")
@@ -120,6 +169,7 @@ class Config:
         # Create necessary directories
         os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
         os.makedirs(Config.CHROMA_DB_PATH, exist_ok=True)
+        os.makedirs('generated_reports', exist_ok=True)
         
         logger.info("Configuration validated successfully")
         return True
@@ -139,6 +189,12 @@ class Config:
     def get_available_prompts():
         """Get list of available prompt templates."""
         return list(Config.SYSTEM_PROMPTS.keys())
+    
+    @staticmethod
+    def get_brand_color_rgb():
+        """Convert brand color hex to RGB tuple for Word documents."""
+        hex_color = Config.BRAND_COLOR.lstrip('#')
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
     @staticmethod
     def allowed_file(filename):
