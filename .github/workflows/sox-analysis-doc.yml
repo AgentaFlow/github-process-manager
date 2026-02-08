@@ -1,0 +1,163 @@
+name: SOX Control Analysis Report Generator
+
+on:
+  workflow_dispatch:
+    inputs:
+      control_name:
+        description: 'Name of the SOX control to analyze'
+        required: true
+        default: 'SOX Control'
+      control_data:
+        description: 'Control data and context for analysis'
+        required: true
+      analysis_type:
+        description: 'Type of analysis to perform'
+        required: false
+        default: 'standard'
+        type: choice
+        options:
+          - standard
+          - detailed
+          - summary
+
+jobs:
+  generate-sox-report:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install python-docx
+      
+      - name: Generate SOX Analysis Report
+        env:
+          CONTROL_NAME: ${{ inputs.control_name }}
+          CONTROL_DATA: ${{ inputs.control_data }}
+          ANALYSIS_TYPE: ${{ inputs.analysis_type }}
+        run: |
+          python << 'EOF'
+          from docx import Document
+          from docx.shared import Pt, RGBColor, Inches
+          from docx.enum.text import WD_ALIGN_PARAGRAPH
+          from datetime import datetime
+          import os
+          
+          # Get workflow inputs from environment variables
+          control_name = os.environ.get('CONTROL_NAME', 'SOX Control')
+          control_data = os.environ.get('CONTROL_DATA', '')
+          analysis_type = os.environ.get('ANALYSIS_TYPE', 'standard')
+          
+          # Create document
+          doc = Document()
+          
+          # Set default font to Calibri
+          style = doc.styles['Normal']
+          font = style.font
+          font.name = 'Calibri'
+          font.size = Pt(11)
+          
+          # Add KPMG header
+          header_section = doc.sections[0]
+          header = header_section.header
+          header_para = header.paragraphs[0]
+          header_para.text = 'KPMG | SOX Control Testing - GitHub Actions Generated'
+          header_para.alignment = 2  # Right align
+          header_run = header_para.runs[0]
+          header_run.font.size = Pt(10)
+          header_run.font.color.rgb = RGBColor(0, 51, 141)  # KPMG Blue
+          
+          # Add title
+          title = doc.add_heading('SOX Control Analysis Report', 0)
+          title.alignment = 1  # Center
+          title_run = title.runs[0]
+          title_run.font.color.rgb = RGBColor(0, 51, 141)
+          title_run.font.size = Pt(18)
+          
+          # Add control name
+          control_heading = doc.add_heading(control_name, level=2)
+          control_heading.alignment = 1  # Center
+          
+          doc.add_paragraph()
+          
+          # Add metadata
+          info_para = doc.add_paragraph()
+          info_para.add_run(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}\n").bold = True
+          info_para.add_run(f"Analysis Type: {analysis_type.title()}\n").bold = True
+          info_para.add_run(f"Source: GitHub Actions Workflow\n").bold = True
+          
+          doc.add_paragraph('_' * 80)
+          doc.add_paragraph()
+          
+          # Add sections
+          sections = [
+              ('1. Control Objective', 
+               'To ensure accurate and complete recording of all financial transactions in accordance with SOX requirements.'),
+              ('2. Risks Addressed',
+               '• Risk of material misstatement in financial records\n• Risk of unauthorized or fraudulent transactions\n• Risk of incomplete or inaccurate data processing'),
+              ('3. Testing Procedures',
+               '1. Select a representative sample of transactions from the reporting period\n2. Verify proper authorization and approval documentation\n3. Validate accounting classification and amounts\n4. Confirm completeness of supporting documentation\n5. Test system controls and access restrictions'),
+              ('4. Test Results and Findings',
+               f'Analysis Type: {analysis_type.title()}\n\nControl Data Analyzed:\n{control_data}\n\nFindings:\n• Sample size: To be determined based on population\n• Exceptions identified: To be documented during testing\n• Control effectiveness: To be assessed upon completion'),
+              ('5. Conclusion and Recommendation',
+               'This report provides the framework for SOX control analysis. Actual testing results and conclusions should be documented based on specific control testing performed. Recommendations will be provided based on findings.')
+          ]
+          
+          for section_title, section_content in sections:
+              heading = doc.add_heading(section_title, level=1)
+              heading_run = heading.runs[0]
+              heading_run.font.color.rgb = RGBColor(0, 51, 141)
+              heading_run.font.size = Pt(14)
+              
+              doc.add_paragraph(section_content)
+              doc.add_paragraph()
+          
+          # Add footer
+          footer_section = doc.sections[0]
+          footer = footer_section.footer
+          footer_para = footer.paragraphs[0]
+          footer_para.text = 'Page | Confidential | Generated by GitHub Actions'
+          footer_para.alignment = 1  # Center
+          footer_run = footer_para.runs[0]
+          footer_run.font.size = Pt(9)
+          footer_run.font.color.rgb = RGBColor(128, 128, 128)
+          
+          # Save document
+          safe_name = ''.join(c for c in control_name if c.isalnum() or c in (' ', '_')).replace(' ', '_')
+          filename = f'SOX_Analysis_{safe_name}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.docx'
+          doc.save(filename)
+          print(f"✅ Generated: {filename}")
+          
+          # Save filename for next step
+          with open('report_filename.txt', 'w') as f:
+              f.write(filename)
+          EOF
+      
+      - name: Get report filename
+        id: get_filename
+        run: echo "filename=$(cat report_filename.txt)" >> $GITHUB_OUTPUT
+      
+      - name: Upload SOX Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sox-report
+          path: ${{ steps.get_filename.outputs.filename }}
+          retention-days: 7
+      
+      - name: Summary
+        run: |
+          echo "## ✅ SOX Analysis Report Generated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Control Name:** ${{ inputs.control_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Analysis Type:** ${{ inputs.analysis_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📄 Download the Word document from the **Artifacts** section above." >> $GITHUB_STEP_SUMMARY

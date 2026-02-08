@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}RAG Chatbot{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h1>Microsoft Demo SOX Chatbot</h1>
+            </div>
+            <div class="nav-links">
+                <a href="/" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">Chat</a>
+                <a href="/settings"
+                    class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}">Settings</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>SOX AI RAG Chatbot with GitHub Integration</p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

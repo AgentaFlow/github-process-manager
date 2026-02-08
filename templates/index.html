@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}Chat - RAG Chatbot{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <div class="chat-header">
+        <h2>Chat with AI Assistant</h2>
+        <div class="status-indicators">
+            <span class="status-indicator" id="rag-status" title="RAG Documents">
+                📚 <span id="rag-count">0</span> docs
+            </span>
+            <span class="status-indicator" id="github-status" title="GitHub Connection">
+                <span id="github-icon">🔗</span> <span id="github-text">Not connected</span>
+            </span>
+        </div>
+    </div>
+
+    <div class="upload-section">
+        <h3>Upload Reference Documents</h3>
+        <div class="upload-area">
+            <input type="file" id="file-input" accept=".txt,.pdf,.docx" style="display: none;">
+            <button class="btn-upload" onclick="document.getElementById('file-input').click()">
+                📎 Choose File
+            </button>
+            <span id="file-name" class="file-name"></span>
+            <button class="btn-primary" id="upload-btn" style="display: none;">Upload</button>
+        </div>
+        <p class="help-text">Supported formats: .txt, .pdf, .docx (Max 16MB)</p>
+        <div id="upload-status" class="status-message"></div>
+    </div>
+
+    <div class="chat-box" id="chat-box">
+        <div class="welcome-message">
+            <h3>👋 Welcome!</h3>
+            <p>I'm your SOX AI assistant with access to:</p>
+            <ul>
+                <li>📚 The reference documents you upload</li>
+                <li>🔗 Your GitHub code repository data </li>
+                <li>🤖 AI for intelligent responses</li>
+            </ul>
+            <p>Upload your reference documents above or start chatting below!</p>
+        </div>
+    </div>
+
+    <div class="chat-input-area">
+        <textarea id="chat-input" placeholder="Ask me anything about your documents or GitHub repository..."
+            rows="3"></textarea>
+        <button class="btn-send" id="send-btn">Send</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const chatBox = document.getElementById('chat-box');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+    const fileInput = document.getElementById('file-input');
+    const uploadBtn = document.getElementById('upload-btn');
+    const fileName = document.getElementById('file-name');
+    const uploadStatus = document.getElementById('upload-status');
+
+    // Load status on page load
+    loadStatus();
+
+    // File selection
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            fileName.textContent = e.target.files[0].name;
+            uploadBtn.style.display = 'inline-block';
+        }
+    });
+
+    // Upload document
+    uploadBtn.addEventListener('click', async () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        uploadStatus.textContent = '⏳ Uploading and processing...';
+        uploadStatus.className = 'status-message info';
+        uploadBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                uploadStatus.textContent = `✅ ${data.message}`;
+                uploadStatus.className = 'status-message success';
+                fileInput.value = '';
+                fileName.textContent = '';
+                uploadBtn.style.display = 'none';
+                loadStatus();
+            } else {
+                uploadStatus.textContent = `❌ Error: ${data.error}`;
+                uploadStatus.className = 'status-message error';
+            }
+        } catch (error) {
+            uploadStatus.textContent = `❌ Error: ${error.message}`;
+            uploadStatus.className = 'status-message error';
+        } finally {
+            uploadBtn.disabled = false;
+        }
+    });
+
+    // Send message
+    sendBtn.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    async function sendMessage() {
+        const query = chatInput.value.trim();
+        if (!query) return;
+
+        // Add user message to chat
+        addMessage('user', query);
+
+        // Store the query for potential Word document generation
+        const currentQuery = query;
+        chatInput.value = '';
+
+        // Show typing indicator
+        const typingId = addMessage('assistant', '⏳ Thinking...');
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ query })
+            });
+
+            const data = await response.json();
+
+            // Remove typing indicator
+            document.getElementById(typingId).remove();
+
+            if (response.ok) {
+                // Check if response contains SOX control analysis
+                const isSoxAnalysis = data.response.toLowerCase().includes('control objective')
+                    || data.response.toLowerCase().includes('sox control')
+                    || data.response.toLowerCase().includes('testing procedure')
+                    || data.response.toLowerCase().includes('risks addressed');
+
+                addMessage('assistant', data.response, isSoxAnalysis, currentQuery);
+            } else {
+                addMessage('assistant', `❌ Error: ${data.error}`);
+            }
+        } catch (error) {
+            document.getElementById(typingId).remove();
+            addMessage('assistant', `❌ Error: ${error.message}`);
+        }
+    }
+
+        function addMessage(role, content, showDownloadButton = false, userQuery = '') {
+        const messageDiv = document.createElement('div');
+        const messageId = `msg-${Date.now()}`;
+        messageDiv.id = messageId;
+        messageDiv.className = `message ${role}-message`;
+
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.textContent = role === 'user' ? '👤' : '🤖';
+
+        const text = document.createElement('div');
+        text.className = 'message-text';
+        text.textContent = content;
+
+        // Add download button if SOX analysis detected
+        if (showDownloadButton && role === 'assistant') {
+            const btnContainer = document.createElement('div');
+            btnContainer.style.marginTop = '1rem';
+            btnContainer.style.paddingTop = '0.5rem';
+            btnContainer.style.borderTop = '1px solid #e0e0e0';
+
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'btn-download-word';
+            downloadBtn.innerHTML = '📄 Download Word Report';
+            downloadBtn.onclick = () => generateWordReport(content, userQuery);
+
+            btnContainer.appendChild(downloadBtn);
+            text.appendChild(btnContainer);
+        }
+
+        messageDiv.appendChild(avatar);
+        messageDiv.appendChild(text);
+
+        // Remove welcome message if present
+        const welcomeMsg = chatBox.querySelector('.welcome-message');
+        if (welcomeMsg) welcomeMsg.remove();
+
+        chatBox.appendChild(messageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        return messageId;
+    }
+
+        async function generateWordReport(analysisText, query = '') {
+            // Show status notification
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'status-message info';
+            statusDiv.textContent = '⏳ Generating Word document...';
+            statusDiv.style.position = 'fixed';
+            statusDiv.style.top = '80px';
+            statusDiv.style.right = '20px';
+            statusDiv.style.zIndex = '1000';
+            document.body.appendChild(statusDiv);
+
+            try {
+                const response = await fetch('/api/generate-word-report', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        analysis_text: analysisText,
+                        control_name: 'SOX Control Analysis',
+                        query: query
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    statusDiv.className = 'status-message success';
+                    statusDiv.textContent = '✅ Word document generated! Downloading...';
+
+                    // Trigger download
+                    window.location.href = data.download_url;
+
+                    // Remove status after 3 seconds
+                    setTimeout(() => statusDiv.remove(), 3000);
+                } else {
+                    statusDiv.className = 'status-message error';
+                    statusDiv.textContent = `❌ Error: ${data.error}`;
+                    setTimeout(() => statusDiv.remove(), 5000);
+                }
+            } catch (error) {
+                statusDiv.className = 'status-message error';
+                statusDiv.textContent = `❌ Error: ${error.message}`;
+                setTimeout(() => statusDiv.remove(), 5000);
+            }
+        }
+
+    async function loadStatus() {
+        try {
+            // Load RAG stats
+            const ragResponse = await fetch('/api/rag/stats');
+            const ragData = await ragResponse.json();
+            document.getElementById('rag-count').textContent = ragData.total_chunks || 0;
+
+            // Load GitHub status
+            const healthResponse = await fetch('/health');
+            const healthData = await healthResponse.json();
+
+            const githubIcon = document.getElementById('github-icon');
+            const githubText = document.getElementById('github-text');
+
+            if (healthData.github_connected) {
+                githubIcon.textContent = '✅';
+                githubText.textContent = 'Connected';
+            } else {
+                githubIcon.textContent = '⚠️';
+                githubText.textContent = 'Not connected';
+            }
+        } catch (error) {
+            console.error('Error loading status:', error);
+        }
+    }
+
+    // Refresh status every 30 seconds
+    setInterval(loadStatus, 30000);
+</script>
+{% endblock %}
