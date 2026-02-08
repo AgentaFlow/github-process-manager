@@ -312,6 +312,103 @@ def health():
     })
 
 
+@app.route('/api/prompts/templates', methods=['GET'])
+def get_prompt_templates():
+    """Get available system prompt templates."""
+    try:
+        templates = {}
+        for name in Config.get_available_prompts():
+            templates[name] = Config.SYSTEM_PROMPTS[name]
+        
+        return jsonify({
+            'templates': templates,
+            'current_template': Config.SYSTEM_PROMPT_TEMPLATE,
+            'current_prompt': Config.get_system_prompt()
+        })
+    except Exception as e:
+        logger.error(f"Error getting prompt templates: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/prompts/current', methods=['GET'])
+def get_current_prompt():
+    """Get the currently active system prompt."""
+    try:
+        return jsonify({
+            'prompt': Config.get_system_prompt(),
+            'template': Config.SYSTEM_PROMPT_TEMPLATE,
+            'is_custom': bool(Config.CUSTOM_SYSTEM_PROMPT)
+        })
+    except Exception as e:
+        logger.error(f"Error getting current prompt: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/prompts/update', methods=['POST'])
+def update_prompt():
+    """
+    Update system prompt (session only - not persisted to .env).
+    
+    Request JSON:
+        - template: Template name to use (optional)
+        - custom_prompt: Custom prompt text (optional)
+    """
+    try:
+        data = request.get_json()
+        template = data.get('template')
+        custom_prompt = data.get('custom_prompt')
+        
+        if custom_prompt:
+            # Use custom prompt
+            Config.CUSTOM_SYSTEM_PROMPT = custom_prompt
+            Config.SYSTEM_PROMPT_TEMPLATE = 'custom'
+            logger.info("Updated to custom system prompt")
+        elif template and template in Config.SYSTEM_PROMPTS:
+            # Use template
+            Config.CUSTOM_SYSTEM_PROMPT = ''
+            Config.SYSTEM_PROMPT_TEMPLATE = template
+            logger.info(f"Updated to '{template}' template")
+        else:
+            return jsonify({'error': 'Invalid template or prompt'}), 400
+        
+        # Re-initialize Gemini client with new prompt
+        global gemini_client
+        gemini_client = GeminiClient()
+        
+        return jsonify({
+            'success': True,
+            'message': 'System prompt updated successfully',
+            'current_prompt': Config.get_system_prompt(),
+            'template': Config.SYSTEM_PROMPT_TEMPLATE
+        })
+    except Exception as e:
+        logger.error(f"Error updating prompt: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/prompts/reset', methods=['POST'])
+def reset_prompt():
+    """Reset system prompt to default."""
+    try:
+        Config.CUSTOM_SYSTEM_PROMPT = ''
+        Config.SYSTEM_PROMPT_TEMPLATE = 'default'
+        
+        # Re-initialize Gemini client
+        global gemini_client
+        gemini_client = GeminiClient()
+        
+        logger.info("Reset system prompt to default")
+        
+        return jsonify({
+            'success': True,
+            'message': 'System prompt reset to default',
+            'current_prompt': Config.get_system_prompt()
+        })
+    except Exception as e:
+        logger.error(f"Error resetting prompt: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/generate-word-report', methods=['POST'])
 def generate_word_report():
     """

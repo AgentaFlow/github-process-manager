@@ -209,8 +209,196 @@ Key settings in `config.py`:
 - `TOP_K_RESULTS`: 3 RAG chunks retrieved per query
 - `GEMINI_MODEL`: gemini-2.5-flash
 - `GEMINI_EMBEDDING_MODEL`: text-embedding-004
-- `TEMPERATURE`: 0.7
-- `MAX_OUTPUT_TOKENS`: 2048
+- `TEMPERATURE`: 0.7 (configurable via `GEMINI_TEMPERATURE`)
+- `MAX_OUTPUT_TOKENS`: 2048 (configurable via `GEMINI_MAX_TOKENS`)
+
+## AI System Prompt Customization
+
+### Overview
+
+The application supports flexible system prompt configuration through three mechanisms:
+1. **Pre-defined Templates** - 6 ready-to-use prompt personas
+2. **Custom Prompts** - Write your own system instructions
+3. **Multi-level Configuration** - Environment variables + Session-based UI changes
+
+### Pre-defined Templates
+
+Located in `config.py:SYSTEM_PROMPTS` dictionary:
+
+**1. default**
+- Balanced, helpful assistant for general queries
+- Professional and concise responses
+- Suitable for most use cases
+
+**2. technical_expert**
+- Deep technical explanations with implementation details
+- Code examples and best practices
+- Architecture diagrams and design patterns
+- Ideal for: Software engineering, system design, debugging
+
+**3. security_auditor**
+- Security-focused analysis and threat modeling
+- Compliance framework expertise (SOX, GDPR, ISO 27001)
+- Risk assessment and remediation recommendations
+- Ideal for: Security audits, compliance documentation, vulnerability analysis
+
+**4. developer_assistant**
+- Code-heavy responses with working examples
+- Multiple programming languages and frameworks
+- Debugging, optimization, and refactoring suggestions
+- Ideal for: Active development, code reviews, troubleshooting
+
+**5. data_analyst**
+- Structured analysis with metrics and KPIs
+- Data visualization recommendations
+- Statistical insights and trend analysis
+- Ideal for: Reports, dashboards, business intelligence
+
+**6. technical_educator**
+- Clear, beginner-friendly explanations
+- Analogies and real-world examples
+- Step-by-step learning paths
+- Ideal for: Training, documentation, onboarding
+
+### Configuration Methods
+
+#### Method 1: Environment Variables (.env)
+
+**Permanent configuration** (persists across server restarts):
+
+```env
+# Option A: Use a pre-defined template
+SYSTEM_PROMPT_TEMPLATE=technical_expert
+
+# Option B: Set a custom prompt
+CUSTOM_SYSTEM_PROMPT="You are a cloud infrastructure expert specializing in AWS. Provide detailed, actionable recommendations."
+```
+
+**Priority**: `CUSTOM_SYSTEM_PROMPT` > `SYSTEM_PROMPT_TEMPLATE` > default template
+
+#### Method 2: Settings UI (Session-based)
+
+**Temporary configuration** (session-based, resets on server restart):
+
+1. Navigate to `/settings`
+2. Scroll to "AI System Prompt Configuration"
+3. Select template or create custom prompt
+4. Click "Update Prompt"
+5. Changes apply immediately to new chat queries
+
+**Implementation**:
+- Frontend: `templates/settings.html` (lines added for prompt UI)
+- JavaScript: Event handlers for template selection, custom editor, save/reset
+- API Integration: `/api/prompts/update`, `/api/prompts/reset`
+
+#### Method 3: API Endpoints (Programmatic)
+
+**For automation and integration**:
+
+```python
+# Get available templates
+GET /api/prompts/templates
+# Response: {"templates": {...}, "current_template": "default"}
+
+# Get current prompt
+GET /api/prompts/current
+# Response: {"prompt": "...", "source": "template", "template": "default"}
+
+# Update with template
+POST /api/prompts/update
+# Body: {"template": "technical_expert"}
+
+# Update with custom prompt
+POST /api/prompts/update
+# Body: {"custom_prompt": "Your custom instruction..."}
+
+# Reset to default
+POST /api/prompts/reset
+# Response: {"message": "Prompt reset to default"}
+```
+
+### Implementation Details
+
+**config.py**
+- `SYSTEM_PROMPTS`: Dictionary of all 6 templates
+- `get_system_prompt()`: Returns active prompt (checks `CUSTOM_SYSTEM_PROMPT` → `SYSTEM_PROMPT_TEMPLATE` → default)
+- `get_available_prompts()`: Returns list of template names
+
+**gemini_client.py**
+- `_build_prompt()`: Calls `Config.get_system_prompt()` for each query
+- Dynamic prompt injection before RAG context and user query
+
+**app.py**
+- Session variable: `session.get('custom_system_prompt')` for UI-based changes
+- 5 new API endpoints for prompt management
+- Re-initialization of `GeminiClient` on prompt updates
+
+**templates/settings.html**
+- Dropdown: 7 options (6 templates + custom)
+- Custom editor: Textarea with live preview
+- JavaScript: Async fetch calls to API endpoints
+- Status feedback: Success/error messages
+
+### Usage Examples
+
+**Example 1: Security Audit Mode**
+```env
+SYSTEM_PROMPT_TEMPLATE=security_auditor
+```
+Result: All responses focus on security implications, compliance requirements, and risk mitigation.
+
+**Example 2: Custom Corporate Assistant**
+```env
+CUSTOM_SYSTEM_PROMPT="You are the AI assistant for Acme Corp. Focus on our internal processes, AWS infrastructure, and Python microservices architecture. Reference our coding standards and security policies."
+```
+Result: Responses tailored to company-specific context.
+
+**Example 3: Session-based Switching**
+1. Start with default template
+2. User opens Settings → selects "Developer Assistant"
+3. Next queries get code-heavy, implementation-focused responses
+4. User resets to default before closing
+5. Server restart → reverts to `.env` configuration
+
+### Testing the Feature
+
+**Test Template Switching**:
+1. Ask: "Explain how authentication works"
+2. Switch to `security_auditor` template
+3. Ask same question
+4. Compare responses (should see security-focused analysis)
+
+**Test Custom Prompt**:
+1. Create custom prompt: "You are a DevOps expert. Always mention Docker and Kubernetes."
+2. Ask: "How do I deploy this application?"
+3. Verify response includes containerization recommendations
+
+**Test Persistence**:
+1. Set template via UI
+2. Restart server
+3. Verify reset to `.env` configuration
+
+### Best Practices
+
+**When to Use Each Template**:
+- `default`: General chatbot, mixed queries
+- `technical_expert`: Architecture discussions, system design
+- `security_auditor`: SOX reports, security reviews, compliance docs
+- `developer_assistant`: Active coding sessions, debugging
+- `data_analyst`: Business reports, metrics analysis
+- `technical_educator`: Training materials, documentation
+
+**Writing Custom Prompts**:
+- Be specific about domain expertise
+- Include output format preferences
+- Mention key technologies or frameworks
+- Set tone and style expectations
+- Keep under 500 words for best results
+
+**Configuration Strategy**:
+- `.env` for default organizational behavior
+- UI for temporary context switching
+- API for automated workflows or integrations
 
 ## Query Type Detection
 

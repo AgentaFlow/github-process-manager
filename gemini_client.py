@@ -78,13 +78,9 @@ class GeminiClient:
         # Detect query type for structured responses
         query_type = self._detect_query_type(user_query)
         
-        # System instruction
-        prompt_parts.append(
-            "You are a helpful AI assistant with access to reference documents "
-            "and GitHub repository information. Provide accurate, concise answers "
-            "based on the provided context. If the context doesn't contain relevant "
-            "information, say so clearly."
-        )
+        # Get system prompt from configuration
+        system_instruction = Config.get_system_prompt()
+        prompt_parts.append(system_instruction)
         
         # Add type-specific instructions for structured responses
         if query_type == 'sox_audit':

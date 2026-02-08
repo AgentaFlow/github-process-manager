@@ -138,6 +138,52 @@
         <div id="rag-status" class="status-message"></div>
     </div>
 
+    <!-- AI Configuration -->
+    <div class="settings-section">
+        <h3>🤖 AI System Prompt Configuration</h3>
+
+        <p class="info-text">Customize how the AI assistant behaves and responds. Choose a template or create your own custom prompt.</p>
+
+        <div class="form-group">
+            <label for="prompt-template">Prompt Template:</label>
+            <select id="prompt-template" class="input-field">
+                <option value="default">Default - General AI Assistant</option>
+                <option value="technical">Technical - Documentation Expert</option>
+                <option value="auditor">Auditor - Compliance Specialist</option>
+                <option value="developer">Developer - Software Engineer</option>
+                <option value="analyst">Analyst - Process Consultant</option>
+                <option value="educator">Educator - Technical Mentor</option>
+                <option value="custom">Custom - Write Your Own</option>
+            </select>
+        </div>
+
+        <div id="template-preview" class="info-card" style="margin-bottom: 1rem;">
+            <strong>Current Prompt:</strong>
+            <p id="preview-text" style="margin-top: 0.5rem; font-style: italic;"></p>
+        </div>
+
+        <div id="custom-prompt-editor" style="display: none;">
+            <div class="form-group">
+                <label for="custom-prompt-text">Custom System Prompt:</label>
+                <textarea id="custom-prompt-text" rows="6" 
+                    placeholder="Enter your custom system prompt here..." 
+                    class="input-field"></textarea>
+                <small class="info-text">💡 Tip: Define the AI's role, expertise, and response style. Be specific about how it should format responses.</small>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+            <button class="btn-primary" id="update-prompt-btn">💾 Save Prompt</button>
+            <button class="btn-secondary" id="reset-prompt-btn">🔄 Reset to Default</button>
+        </div>
+        
+        <div id="prompt-status" class="status-message"></div>
+        
+        <div class="info-card" style="margin-top: 1rem; background-color: #fff3cd; border-left: 4px solid #ffc107;">
+            <p style="margin: 0;"><strong>ℹ️ Note:</strong> Prompt changes are session-only. To make permanent changes, edit the SYSTEM_PROMPT_TEMPLATE or CUSTOM_SYSTEM_PROMPT in your .env file.</p>
+        </div>
+    </div>
+
     <!-- System Information -->
     <div class="settings-section">
         <h3>ℹ️ System Information</h3>
@@ -500,5 +546,144 @@
 
         // Load reports on page load
         loadReports();
+
+        // AI Prompt Configuration
+        const promptTemplate = document.getElementById('prompt-template');
+        const customPromptEditor = document.getElementById('custom-prompt-editor');
+        const customPromptText = document.getElementById('custom-prompt-text');
+        const templatePreview = document.getElementById('preview-text');
+        const updatePromptBtn = document.getElementById('update-prompt-btn');
+        const resetPromptBtn = document.getElementById('reset-prompt-btn');
+        const promptStatus = document.getElementById('prompt-status');
+
+        let promptTemplates = {};
+
+        // Load available prompt templates
+        async function loadPromptTemplates() {
+            try {
+                const response = await fetch('/api/prompts/templates');
+                const data = await response.json();
+
+                if (response.ok) {
+                    promptTemplates = data.templates;
+                    
+                    // Set current template
+                    if (data.current_template) {
+                        promptTemplate.value = data.current_template;
+                    }
+                    
+                    // Update preview
+                    updatePreview();
+                }
+            } catch (error) {
+                console.error('Error loading prompt templates:', error);
+            }
+        }
+
+        // Update preview text
+        function updatePreview() {
+            const selected = promptTemplate.value;
+            
+            if (selected === 'custom') {
+                templatePreview.textContent = customPromptText.value || 'Enter your custom prompt above...';
+            } else if (promptTemplates[selected]) {
+                templatePreview.textContent = promptTemplates[selected];
+            }
+        }
+
+        // Toggle custom prompt editor
+        promptTemplate.addEventListener('change', () => {
+            const selected = promptTemplate.value;
+            
+            if (selected === 'custom') {
+                customPromptEditor.style.display = 'block';
+            } else {
+                customPromptEditor.style.display = 'none';
+            }
+            
+            updatePreview();
+        });
+
+        // Update preview when typing custom prompt
+        customPromptText.addEventListener('input', updatePreview);
+
+        // Update prompt
+        updatePromptBtn.addEventListener('click', async () => {
+            const selected = promptTemplate.value;
+            let requestBody = {};
+
+            if (selected === 'custom') {
+                const customText = customPromptText.value.trim();
+                if (!customText) {
+                    showStatus(promptStatus, '❌ Please enter a custom prompt', 'error');
+                    return;
+                }
+                requestBody.custom_prompt = customText;
+            } else {
+                requestBody.template = selected;
+            }
+
+            updatePromptBtn.disabled = true;
+            showStatus(promptStatus, '⏳ Updating prompt...', 'info');
+
+            try {
+                const response = await fetch('/api/prompts/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showStatus(promptStatus, `✅ ${data.message}`, 'success');
+                    updatePreview();
+                } else {
+                    showStatus(promptStatus, `❌ Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(promptStatus, `❌ Error: ${error.message}`, 'error');
+            } finally {
+                updatePromptBtn.disabled = false;
+            }
+        });
+
+        // Reset prompt to default
+        resetPromptBtn.addEventListener('click', async () => {
+            if (!confirm('Reset to default prompt? This will clear any custom settings.')) {
+                return;
+            }
+
+            resetPromptBtn.disabled = true;
+            showStatus(promptStatus, '⏳ Resetting prompt...', 'info');
+
+            try {
+                const response = await fetch('/api/prompts/reset', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showStatus(promptStatus, `✅ ${data.message}`, 'success');
+                    promptTemplate.value = 'default';
+                    customPromptEditor.style.display = 'none';
+                    customPromptText.value = '';
+                    updatePreview();
+                } else {
+                    showStatus(promptStatus, `❌ Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(promptStatus, `❌ Error: ${error.message}`, 'error');
+            } finally {
+                resetPromptBtn.disabled = false;
+            }
+        });
+
+        // Load prompt templates on page load
+        loadPromptTemplates();
+
 </script>
 {% endblock %}

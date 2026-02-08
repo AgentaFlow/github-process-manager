@@ -44,8 +44,59 @@ class Config:
     # Gemini Model Configuration
     GEMINI_MODEL = 'gemini-2.5-flash'  # Latest stable Gemini 2.5 Flash model
     GEMINI_EMBEDDING_MODEL = 'models/text-embedding-004'
-    TEMPERATURE = 0.7
-    MAX_OUTPUT_TOKENS = 2048
+    TEMPERATURE = float(os.getenv('GEMINI_TEMPERATURE', '0.7'))
+    MAX_OUTPUT_TOKENS = int(os.getenv('GEMINI_MAX_TOKENS', '2048'))
+    
+    # System Prompt Configuration
+    SYSTEM_PROMPT_TEMPLATE = os.getenv('SYSTEM_PROMPT_TEMPLATE', 'default')
+    CUSTOM_SYSTEM_PROMPT = os.getenv('CUSTOM_SYSTEM_PROMPT', '')
+    
+    # Pre-defined System Prompt Templates
+    SYSTEM_PROMPTS = {
+        'default': (
+            "You are a helpful AI assistant with access to reference documents "
+            "and GitHub repository information. Provide accurate, concise answers "
+            "based on the provided context. If the context doesn't contain relevant "
+            "information, say so clearly."
+        ),
+        'technical': (
+            "You are a senior technical documentation expert and software architect. "
+            "Analyze code, documentation, and technical processes with deep expertise. "
+            "Provide detailed technical insights, best practices, and architectural "
+            "recommendations. Use precise technical terminology and cite specific "
+            "documentation when available. If information is missing, clearly state "
+            "what additional context would be helpful."
+        ),
+        'auditor': (
+            "You are an experienced compliance auditor and risk assessment expert. "
+            "Focus on control effectiveness, risk mitigation, and regulatory compliance. "
+            "Provide thorough analysis of controls, identify gaps, and recommend "
+            "remediation actions. Structure responses with clear findings, evidence, "
+            "and actionable recommendations. Maintain professional audit documentation "
+            "standards."
+        ),
+        'developer': (
+            "You are an expert software developer and DevOps engineer. "
+            "Provide practical code solutions, debugging assistance, and best practices "
+            "for software development. Focus on code quality, performance, security, "
+            "and maintainability. Use code examples when helpful and explain complex "
+            "concepts clearly. Reference documentation and industry standards."
+        ),
+        'analyst': (
+            "You are a business analyst and process improvement consultant. "
+            "Analyze workflows, identify inefficiencies, and recommend optimizations. "
+            "Provide structured analysis with clear problem statements, root causes, "
+            "and actionable solutions. Use data-driven insights and reference best "
+            "practices in process management."
+        ),
+        'educator': (
+            "You are an experienced technical educator and mentor. "
+            "Explain concepts clearly and progressively, adapting to different "
+            "knowledge levels. Use examples, analogies, and step-by-step breakdowns. "
+            "Encourage learning by asking clarifying questions and suggesting "
+            "additional resources. Make complex topics accessible and engaging."
+        )
+    }
     
     @staticmethod
     def validate():
@@ -72,6 +123,22 @@ class Config:
         
         logger.info("Configuration validated successfully")
         return True
+    
+    @staticmethod
+    def get_system_prompt():
+        """Get the active system prompt based on configuration."""
+        # Custom prompt takes precedence
+        if Config.CUSTOM_SYSTEM_PROMPT:
+            return Config.CUSTOM_SYSTEM_PROMPT
+        
+        # Use template from config
+        template = Config.SYSTEM_PROMPT_TEMPLATE
+        return Config.SYSTEM_PROMPTS.get(template, Config.SYSTEM_PROMPTS['default'])
+    
+    @staticmethod
+    def get_available_prompts():
+        """Get list of available prompt templates."""
+        return list(Config.SYSTEM_PROMPTS.keys())
 
     @staticmethod
     def allowed_file(filename):

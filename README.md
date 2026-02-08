@@ -193,6 +193,55 @@ docker-compose exec app /bin/bash
 2. Click **"Load Workflows"**
 3. Click **"Trigger"** on any workflow to manually start it
 
+### Customize AI Behavior
+
+The application supports customizable system prompts to tailor AI responses to your needs:
+
+#### Using Pre-defined Templates
+
+1. Go to **Settings** → **AI System Prompt Configuration**
+2. Select a template from the dropdown:
+   - **Default** - Balanced assistant for general queries
+   - **Technical Expert** - Deep technical explanations with code examples
+   - **Security Auditor** - Security-focused analysis and compliance
+   - **Developer Assistant** - Code-heavy responses with best practices
+   - **Data Analyst** - Structured analysis with metrics and insights
+   - **Technical Educator** - Clear explanations for learning purposes
+3. Click **"Update Prompt"** to apply (changes last for your session)
+4. See the preview to verify the selected template
+
+#### Creating Custom Prompts
+
+1. Go to **Settings** → **AI System Prompt Configuration**
+2. Select **"Custom Prompt"** from the dropdown
+3. Write your own system instruction in the text editor
+4. Click **"Update Prompt"** to apply
+5. Example custom prompt:
+   ```
+   You are a helpful assistant specializing in cloud infrastructure.
+   Focus on AWS best practices, security, and cost optimization.
+   Provide actionable recommendations with specific service names.
+   ```
+
+#### Permanent Configuration (via .env)
+
+For persistent customization across server restarts:
+
+1. Edit your `.env` file
+2. Set one of these variables:
+   ```env
+   # Use a pre-defined template
+   SYSTEM_PROMPT_TEMPLATE=technical_expert
+   
+   # Or set a custom prompt
+   CUSTOM_SYSTEM_PROMPT="Your custom system instruction here"
+   ```
+3. Restart the application
+
+**Available Templates**: `default`, `technical_expert`, `security_auditor`, `developer_assistant`, `data_analyst`, `technical_educator`
+
+**Note**: Session-based changes (via UI) take priority over `.env` settings until the server restarts.
+
 ## 🏗️ Project Structure
 
 ```
@@ -231,6 +280,10 @@ Edit `config.py` or set environment variables:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `GEMINI_API_KEY` | Google Gemini API key | **Required** |
+| `GEMINI_TEMPERATURE` | AI response randomness (0.0-1.0) | 0.7 |
+| `GEMINI_MAX_TOKENS` | Maximum response length | 2048 |
+| `SYSTEM_PROMPT_TEMPLATE` | Pre-defined prompt template | `default` |
+| `CUSTOM_SYSTEM_PROMPT` | Custom system instruction | None |
 | `GITHUB_TOKEN` | GitHub personal access token | Optional |
 | `GITHUB_REPO_URL` | GitHub repository URL | Optional |
 | `FLASK_SECRET_KEY` | Flask session secret | Auto-generated |
@@ -256,6 +309,12 @@ Edit `config.py` or set environment variables:
 - `POST /api/github/workflow/trigger` - Trigger workflow
 - `GET /api/github/pulls` - Get pull requests
 - `GET /api/github/issues` - Get issues
+
+### AI Prompt Management
+- `GET /api/prompts/templates` - Get available prompt templates
+- `GET /api/prompts/current` - Get current active prompt
+- `POST /api/prompts/update` - Update system prompt (session-based)
+- `POST /api/prompts/reset` - Reset to default prompt
 
 ### System
 - `GET /health` - Health check endpoint
