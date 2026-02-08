@@ -29,6 +29,7 @@ env/
 ENV/
 env.bak/
 venv.bak/
+vemv311/
 
 # ChromaDB
 chroma_db/
@@ -57,3 +58,7 @@ instance/
 workspace.code-workspace
 .claude/PLAN.md
 .claude/NEW_PLAN.md
+,env
+/.venv
+/.venv
+/venv311
