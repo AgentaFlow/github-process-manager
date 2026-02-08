@@ -2,7 +2,7 @@
 Flask application for Local AI RAG Chatbot.
 Main application file with routes and handlers.
 """
-from flask import Flask, render_template, request, jsonify, session, send_file
+from flask import Flask, render_template, request, jsonify, send_file
 import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -11,7 +11,11 @@ from logger import logger
 from rag_engine import RAGEngine
 from gemini_client import GeminiClient
 from github_client import GitHubClient
-from word_generator import create_process_document, list_generated_reports, cleanup_old_reports
+from word_generator import (
+    create_process_document,
+    list_generated_reports,
+    cleanup_old_reports
+)
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -28,15 +32,21 @@ except Exception as e:
     logger.error(f"Failed to initialize application: {e}")
     raise
 
+
 @app.route('/')
 def index():
     """Render main chat interface."""
     return render_template('index.html')
 
+
 @app.route('/settings')
 def settings():
     """Render settings page."""
-    repo_info = github_client.get_repository_info() if github_client.is_connected() else None
+    repo_info = (
+        github_client.get_repository_info()
+        if github_client.is_connected()
+        else None
+    )
     rag_stats = rag_engine.get_stats()
     
     return render_template(
@@ -45,6 +55,7 @@ def settings():
         rag_stats=rag_stats,
         github_connected=github_client.is_connected()
     )
+
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
@@ -69,7 +80,9 @@ def chat():
         if github_client.is_connected():
             github_data = {
                 'repository_info': github_client.get_repository_info(),
-                'pull_requests': github_client.get_pull_requests(state='open', limit=5),
+                'pull_requests': github_client.get_pull_requests(
+                    state='open', limit=5
+                ),
                 'issues': github_client.get_issues(state='open', limit=5)
             }
         
@@ -90,6 +103,7 @@ def chat():
         logger.error(f"Error processing chat request: {e}")
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/api/upload', methods=['POST'])
 def upload_document():
     """Handle document uploads for RAG."""
@@ -103,8 +117,9 @@ def upload_document():
             return jsonify({'error': 'No file selected'}), 400
         
         if not Config.allowed_file(file.filename):
+            allowed = ', '.join(Config.ALLOWED_EXTENSIONS)
             return jsonify({
-                'error': f'File type not allowed. Supported: {", ".join(Config.ALLOWED_EXTENSIONS)}'
+                'error': f'File type not allowed. Supported: {allowed}'
             }), 400
         
         # Secure filename and save
@@ -122,7 +137,10 @@ def upload_document():
         
         return jsonify({
             'success': True,
-            'message': f'Document processed successfully. Added {chunks_added} chunks.',
+            'message': (
+                f'Document processed successfully. '
+                f'Added {chunks_added} chunks.'
+            ),
             'filename': filename,
             'chunks_added': chunks_added
         })
@@ -130,6 +148,7 @@ def upload_document():
     except Exception as e:
         logger.error(f"Error uploading document: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/rag/stats', methods=['GET'])
 def rag_stats():
@@ -141,18 +160,23 @@ def rag_stats():
         logger.error(f"Error getting RAG stats: {e}")
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/api/rag/clear', methods=['POST'])
 def clear_rag():
     """Clear RAG database."""
     try:
         success = rag_engine.clear_database()
         if success:
-            return jsonify({'success': True, 'message': 'RAG database cleared'})
+            return jsonify({
+                'success': True,
+                'message': 'RAG database cleared'
+            })
         else:
             return jsonify({'error': 'Failed to clear database'}), 500
     except Exception as e:
         logger.error(f"Error clearing RAG database: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/github/connect', methods=['POST'])
 def connect_github():
@@ -180,6 +204,7 @@ def connect_github():
         logger.error(f"Error connecting to GitHub: {e}")
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/api/github/info', methods=['GET'])
 def github_info():
     """Get GitHub repository information."""
@@ -194,6 +219,7 @@ def github_info():
         logger.error(f"Error getting GitHub info: {e}")
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/api/github/workflows', methods=['GET'])
 def list_workflows():
     """List available GitHub Actions workflows."""
@@ -207,6 +233,7 @@ def list_workflows():
     except Exception as e:
         logger.error(f"Error listing workflows: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/github/workflow/trigger', methods=['POST'])
 def trigger_workflow():
@@ -237,6 +264,7 @@ def trigger_workflow():
         logger.error(f"Error triggering workflow: {e}")
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/api/github/pulls', methods=['GET'])
 def get_pulls():
     """Get pull requests from repository."""
@@ -253,6 +281,7 @@ def get_pulls():
     except Exception as e:
         logger.error(f"Error getting pull requests: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/github/issues', methods=['GET'])
 def get_issues():
@@ -271,6 +300,7 @@ def get_issues():
         logger.error(f"Error getting issues: {e}")
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/health', methods=['GET'])
 def health():
     """Health check endpoint."""
@@ -280,6 +310,7 @@ def health():
         'github_connected': github_client.is_connected(),
         'rag_chunks': rag_engine.get_stats().get('total_chunks', 0)
     })
+
 
 @app.route('/api/generate-word-report', methods=['POST'])
 def generate_word_report():
@@ -310,7 +341,9 @@ def generate_word_report():
         }
         
         # Generate Word document
-        filename = create_process_document(analysis_text, process_name, metadata)
+        filename = create_process_document(
+            analysis_text, process_name, metadata
+        )
         
         logger.info(f"Generated Word report: {filename}")
         
@@ -323,6 +356,7 @@ def generate_word_report():
     except Exception as e:
         logger.error(f"Error generating Word report: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/download/<filename>', methods=['GET'])
 def download_file(filename):
@@ -347,12 +381,16 @@ def download_file(filename):
             filepath,
             as_attachment=True,
             download_name=filename,
-            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            mimetype=(
+                'application/vnd.openxmlformats-'
+                'officedocument.wordprocessingml.document'
+            )
         )
         
     except Exception as e:
         logger.error(f"Error downloading file: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/reports/list', methods=['GET'])
 def list_reports():
@@ -371,6 +409,7 @@ def list_reports():
     except Exception as e:
         logger.error(f"Error listing reports: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/reports/cleanup', methods=['POST'])
 def cleanup_reports():
@@ -399,6 +438,7 @@ def cleanup_reports():
         logger.error(f"Error cleaning up reports: {e}")
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/api/github/process-analysis/trigger', methods=['POST'])
 def trigger_process_analysis_workflow():
     """
@@ -422,7 +462,9 @@ def trigger_process_analysis_workflow():
         analysis_type = data.get('analysis_type', 'standard')
         
         # Trigger the workflow
-        run_info = github_client.trigger_process_workflow(process_name, process_data, analysis_type)
+        run_info = github_client.trigger_process_workflow(
+            process_name, process_data, analysis_type
+        )
         
         return jsonify({
             'success': True,
@@ -434,6 +476,7 @@ def trigger_process_analysis_workflow():
     except Exception as e:
         logger.error(f"Error triggering SOX workflow: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/github/artifacts/check/<int:run_id>', methods=['GET'])
 def check_workflow_artifacts(run_id):
@@ -451,13 +494,16 @@ def check_workflow_artifacts(run_id):
             return jsonify({'error': 'GitHub not connected'}), 400
         
         # Check for artifacts and download if available
-        result = github_client.check_and_download_artifact(run_id, 'sox-report')
+        result = github_client.check_and_download_artifact(
+            run_id, 'sox-report'
+        )
         
         return jsonify(result)
         
     except Exception as e:
         logger.error(f"Error checking workflow artifacts: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(
