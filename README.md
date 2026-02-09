@@ -1,4 +1,4 @@
-# 🤖 GitHub Process Manager - AI-Powered Documentation Assistant
+# 🤖 GitHub Process Manager - AI-Powered Workflow and Documentation Assistant
 
 A lightweight, local AI-powered assistant that combines **Retrieval-Augmented Generation (RAG)** with the **Gemini API** and **GitHub repository integration**. Upload reference documents, connect to your GitHub repositories, and get intelligent responses for process documentation, SOX compliance, MLOps workflows, DevOps pipelines, and more.
 
