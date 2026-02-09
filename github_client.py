@@ -16,7 +16,8 @@ class GitHubClient:
         self.token = Config.GITHUB_TOKEN
         self.repo_url = Config.GITHUB_REPO_URL
         
-        if self.token:
+        # Skip GitHub initialization if token is invalid/placeholder
+        if self.token and self.token != 'your_github_personal_access_token_here':
             try:
                 self.github = Github(self.token)
                 
@@ -29,8 +30,8 @@ class GitHubClient:
                     self._connect_repository(self.repo_url)
                     
             except GithubException as e:
-                logger.error(f"GitHub authentication failed: {e}")
-                raise
+                logger.warning(f"GitHub authentication failed: {e}. GitHub features will be unavailable.")
+                self.github = None
         else:
             logger.warning("GitHub token not configured. GitHub features will be unavailable.")
     
