@@ -1,0 +1,206 @@
+name: MLOps Model Validation Report
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_name:
+        description: 'Model name'
+        required: true
+        type: string
+      model_version:
+        description: 'Model version (semver format: X.Y.Z)'
+        required: true
+        type: string
+      validation_type:
+        description: 'Type of validation to perform'
+        required: true
+        type: choice
+        options:
+          - unit
+          - integration
+          - performance
+          - regression
+        default: 'performance'
+      dataset_info:
+        description: 'Dataset information (name, version, samples)'
+        required: false
+        type: string
+        default: 'Validation dataset v1.0'
+      metrics_json:
+        description: 'Validation metrics as JSON string (e.g., {"accuracy": 0.95, "f1": 0.93})'
+        required: false
+        type: string
+        default: '{}'
+
+jobs:
+  generate-validation-report:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --no-cache-dir python-docx
+
+      - name: Generate Validation Report
+        run: |
+          python3 << 'EOF'
+          import json
+          import os
+          from datetime import datetime
+          from docx import Document
+          from docx.shared import Inches, Pt, RGBColor
+          from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+          # Get workflow inputs
+          model_name = "${{ inputs.model_name }}"
+          model_version = "${{ inputs.model_version }}"
+          validation_type = "${{ inputs.validation_type }}"
+          dataset_info = "${{ inputs.dataset_info }}"
+          metrics_json = """${{ inputs.metrics_json }}"""
+
+          # Parse metrics
+          try:
+              metrics = json.loads(metrics_json) if metrics_json and metrics_json != '{}' else {}
+          except json.JSONDecodeError:
+              metrics = {}
+
+          # Create document
+          doc = Document()
+          
+          # Set default font
+          style = doc.styles['Normal']
+          font = style.font
+          font.name = 'Calibri'
+          font.size = Pt(11)
+
+          # Add header
+          header = doc.sections[0].header
+          header_para = header.paragraphs[0]
+          header_para.text = "GitHub Process Manager | MLOps Workflow Documentation"
+          header_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+          header_run = header_para.runs[0]
+          header_run.font.size = Pt(10)
+          header_run.font.color.rgb = RGBColor(74, 144, 226)  # Light blue
+
+          # Add title
+          title = doc.add_heading('Model Validation Report', 0)
+          title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+          # Add metadata
+          doc.add_paragraph(f"Model Name: {model_name}", style='Body Text')
+          doc.add_paragraph(f"Model Version: {model_version}", style='Body Text')
+          doc.add_paragraph(f"Validation Type: {validation_type.upper()}", style='Body Text')
+          doc.add_paragraph(f"Validation Date: {datetime.now().strftime('%Y-%m-%d')}", style='Body Text')
+          doc.add_paragraph(f"Dataset: {dataset_info}", style='Body Text')
+          doc.add_paragraph()  # Blank line
+
+          # Section 1: Model Overview
+          doc.add_heading('1. Model Overview', 1)
+          doc.add_paragraph(f"This document contains {validation_type} validation results for {model_name} version {model_version}.")
+          doc.add_paragraph(f"The validation was performed on {datetime.now().strftime('%B %d, %Y')} using {dataset_info}.")
+          doc.add_paragraph()
+
+          # Section 2: Data Pipeline
+          doc.add_heading('2. Data Pipeline', 1)
+          doc.add_paragraph("Validation dataset information:")
+          doc.add_paragraph(f"• Dataset: {dataset_info}")
+          doc.add_paragraph("• Data preprocessing: Standard normalization and feature engineering")
+          doc.add_paragraph("• Data split: Train/Validation/Test methodology applied")
+          doc.add_paragraph()
+
+          # Section 3: Training Process
+          doc.add_heading('3. Training Process', 1)
+          doc.add_paragraph("Model training configuration:")
+          doc.add_paragraph(f"• Model Version: {model_version}")
+          doc.add_paragraph("• Training approach: Supervised learning with cross-validation")
+          doc.add_paragraph("• Hyperparameter optimization: Grid search or Bayesian optimization")
+          doc.add_paragraph()
+
+          # Section 4: Validation Results
+          doc.add_heading('4. Validation Results', 1)
+          
+          if metrics:
+              doc.add_paragraph("Performance Metrics:")
+              for metric_name, metric_value in metrics.items():
+                  if isinstance(metric_value, (int, float)):
+                      doc.add_paragraph(f"• {metric_name.replace('_', ' ').title()}: {metric_value:.4f}")
+                  else:
+                      doc.add_paragraph(f"• {metric_name.replace('_', ' ').title()}: {metric_value}")
+              doc.add_paragraph()
+              
+              # Validation status
+              doc.add_paragraph("Validation Status:", style='Heading 2')
+              accuracy = metrics.get('accuracy', metrics.get('acc', 0))
+              if accuracy >= 0.90:
+                  status = "PASS - Model meets performance requirements"
+              elif accuracy >= 0.85:
+                  status = "CONDITIONAL PASS - Model acceptable but could be improved"
+              else:
+                  status = "FAIL - Model does not meet minimum requirements"
+              doc.add_paragraph(f"Status: {status}")
+          else:
+              doc.add_paragraph("No metrics provided. Please provide metrics in JSON format for detailed validation results.")
+          
+          doc.add_paragraph()
+
+          # Section 5: Deployment Plan
+          doc.add_heading('5. Deployment Plan', 1)
+          doc.add_paragraph("Deployment recommendations:")
+          
+          if metrics and metrics.get('accuracy', 0) >= 0.90:
+              doc.add_paragraph("✓ Model approved for deployment")
+              doc.add_paragraph("• Recommended deployment strategy: Canary deployment (10% → 50% → 100%)")
+              doc.add_paragraph("• Monitoring: Enable comprehensive monitoring for first 48 hours")
+              doc.add_paragraph("• Rollback plan: Previous model version available for immediate rollback")
+          else:
+              doc.add_paragraph("⚠ Additional validation or improvements recommended before deployment")
+              doc.add_paragraph("• Review validation findings")
+              doc.add_paragraph("• Consider model retraining or hyperparameter tuning")
+              doc.add_paragraph("• Perform additional testing")
+          
+          doc.add_paragraph()
+
+          # Footer
+          footer = doc.sections[0].footer
+          footer_para = footer.paragraphs[0]
+          footer_para.text = f"Generated by GitHub Actions • {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+          footer_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+          footer_run = footer_para.runs[0]
+          footer_run.font.size = Pt(9)
+          footer_run.font.color.rgb = RGBColor(128, 128, 128)
+
+          # Save document
+          filename = f"mlops-validation-{model_name.replace(' ', '-')}-v{model_version}.docx"
+          doc.save(filename)
+          print(f"Generated report: {filename}")
+          
+          # Set output for artifact name
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"filename={filename}\n")
+          EOF
+
+      - name: Upload Validation Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlops-validation-report
+          path: mlops-validation-*.docx
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "## MLOps Validation Report Generated ✓" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Model:** ${{ inputs.model_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ inputs.model_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Validation Type:** ${{ inputs.validation_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📥 Download the validation report from the artifacts section above." >> $GITHUB_STEP_SUMMARY

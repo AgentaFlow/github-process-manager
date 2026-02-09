@@ -301,6 +301,125 @@ Modify `document_templates.json` to add new templates:
 - Optional logo support
 - Professional formatting (Calibri, proper spacing, page numbers)
 
+### Using for MLOps
+
+The application includes specialized MLOps templates and workflows for managing machine learning operations.
+
+#### MLOps Documentation Templates
+
+Located in `templates/mlops/`, these guides provide comprehensive MLOps best practices:
+
+1. **mlops_guide.md** - Complete MLOps lifecycle guide covering:
+   - Model development and version control
+   - Experiment tracking (MLflow, Weights & Biases)
+   - Training best practices and reproducibility
+   - Model validation strategies
+   - Deployment strategies (Blue-Green, Canary, Shadow)
+   - Monitoring and drift detection
+   - Model retraining triggers
+
+2. **model_validation_template.md** - Structured validation report template:
+   - Model overview and business context
+   - Validation methodology (unit, integration, performance, regression)
+   - Performance metrics and comparison with baseline
+   - Bias and fairness analysis
+   - Failure pattern analysis
+   - Deployment recommendations
+
+3. **deployment_checklist.md** - Comprehensive pre-deployment checklist:
+   - Model readiness verification
+   - Security and compliance checks
+   - Monitoring and observability setup
+   - Testing requirements (functional, performance, integration)
+   - Deployment strategy selection
+   - Rollback procedures
+
+4. **monitoring_guide.md** - Production monitoring strategies:
+   - Performance metrics tracking
+   - Data drift detection methods
+   - Infrastructure monitoring
+   - Alert configuration
+   - Incident response procedures
+
+#### Using MLOps Templates as RAG Documents
+
+1. Navigate to the **Chat** page
+2. Upload MLOps template files from `templates/mlops/`
+3. Ask questions about ML workflows:
+   - "What metrics should I track for a classification model?"
+   - "How do I implement canary deployment for my model?"
+   - "What are the best practices for detecting data drift?"
+   - "Create a validation checklist for my model deployment"
+
+#### MLOps GitHub Actions Workflows
+
+Located in `.github/workflows/mlops/`, trigger workflows for automated documentation:
+
+**Model Validation Report** (`mlops-model-validation.yml`):
+- Navigate to **Settings** → **GitHub Actions**
+- Select "MLOps Model Validation Report"
+- Provide inputs:
+  - **Model Name**: Your model identifier
+  - **Model Version**: Semantic version (e.g., 1.2.0)
+  - **Validation Type**: unit, integration, performance, or regression
+  - **Metrics JSON**: `{"accuracy": 0.95, "f1": 0.93, "precision": 0.94}`
+- Click **Trigger** to generate a validation report document
+- Download from GitHub Actions artifacts
+
+**Deployment Documentation** (`mlops-deployment-doc.yml`):
+- Select "MLOps Deployment Documentation"
+- Provide inputs:
+  - **Model Name**: Model to deploy
+  - **Model Version**: Version number
+  - **Deployment Target**: staging, production, canary, or development
+  - **Deployment Strategy**: blue-green, canary, rolling, or shadow
+- Generated document includes deployment plan and rollback procedures
+
+#### Example MLOps Queries
+
+Try these queries with MLOps templates uploaded:
+
+**Model Training:**
+```
+"Document the training process for a fraud detection model with 95% accuracy"
+```
+
+**Deployment Planning:**
+```
+"Create a deployment checklist for deploying a recommendation model to production"
+```
+
+**Monitoring Setup:**
+```
+"What alerts should I configure for monitoring a prediction model in production?"
+```
+
+**Validation Reporting:**
+```
+"Generate a validation report for model version 2.1.0 with accuracy 94.2%, precision 93.8%, recall 94.5%"
+```
+
+#### Integration with ML Tools
+
+The MLOps templates include guidance for integrating with popular ML platforms:
+
+- **MLflow**: Experiment tracking, model registry, deployment
+- **Weights & Biases**: Real-time metrics visualization
+- **TensorBoard**: TensorFlow/PyTorch metrics
+- **Kubeflow**: Kubernetes-native ML workflows
+- **AWS SageMaker**, **Google Vertex AI**, **Azure ML**: Cloud ML platforms
+
+Export metrics from these tools and use the GitHub Actions workflows to generate documentation with your actual performance data.
+
+#### MLOps Workflow Best Practices
+
+1. **Version Everything**: Code, data, models, configurations
+2. **Track All Experiments**: Log hyperparameters, metrics, and artifacts
+3. **Validate Before Deploying**: Run all tests (unit, integration, performance)
+4. **Monitor Continuously**: Set up drift detection and performance alerts
+5. **Document Thoroughly**: Use templates for consistency
+6. **Plan Rollbacks**: Always have a tested rollback strategy
+
 ## 🏗️ Project Structure
 
 ```
