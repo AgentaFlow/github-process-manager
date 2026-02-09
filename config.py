@@ -9,6 +9,7 @@ from logger import logger
 # Load environment variables from .env file
 load_dotenv()
 
+
 class Config:
     """Application configuration class."""
     
@@ -20,7 +21,9 @@ class Config:
     GITHUB_REPO_URL = os.getenv('GITHUB_REPO_URL', '')
     
     # Flask Configuration
-    SECRET_KEY = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
+    SECRET_KEY = os.getenv(
+        'FLASK_SECRET_KEY', 'dev-secret-key-change-in-production'
+    )
     DEBUG = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     ENV = os.getenv('FLASK_ENV', 'development')
     
@@ -57,57 +60,70 @@ class Config:
     BRAND_COLOR = os.getenv('BRAND_COLOR', '#4A90E2')
     DOCUMENT_LOGO_PATH = os.getenv('DOCUMENT_LOGO_PATH', '')
     DEFAULT_TEMPLATE_TYPE = os.getenv('DEFAULT_TEMPLATE_TYPE', 'generic')
-    DOCUMENT_TEMPLATES_PATH = os.getenv('DOCUMENT_TEMPLATES_PATH', 'document_templates.json')
+    DOCUMENT_TEMPLATES_PATH = os.getenv(
+        'DOCUMENT_TEMPLATES_PATH', 'document_templates.json'
+    )
     
     # MLOps-specific configuration (optional, isolated from core features)
-    MLOPS_FEATURES_ENABLED = os.getenv('MLOPS_FEATURES_ENABLED', 'false').lower() == 'true'
-    MLOPS_TEMPLATES_DIR = os.getenv('MLOPS_TEMPLATES_DIR', 'templates/mlops')
-    MLOPS_WORKFLOWS_DIR = os.getenv('MLOPS_WORKFLOWS_DIR', '.github/workflows/mlops')
+    MLOPS_FEATURES_ENABLED = os.getenv(
+        'MLOPS_FEATURES_ENABLED', 'false'
+    ).lower() == 'true'
+    MLOPS_TEMPLATES_DIR = os.getenv(
+        'MLOPS_TEMPLATES_DIR', 'templates/mlops'
+    )
+    MLOPS_WORKFLOWS_DIR = os.getenv(
+        'MLOPS_WORKFLOWS_DIR', '.github/workflows/mlops'
+    )
     
     # Pre-defined System Prompt Templates
     SYSTEM_PROMPTS = {
         'default': (
-            "You are a helpful AI assistant with access to reference documents "
-            "and GitHub repository information. Provide accurate, concise answers "
-            "based on the provided context. If the context doesn't contain relevant "
-            "information, say so clearly."
+            "You are a helpful AI assistant with access to reference "
+            "documents and GitHub repository information. Provide accurate, "
+            "concise answers based on the provided context. If the context "
+            "doesn't contain relevant information, say so clearly."
         ),
         'technical': (
-            "You are a senior technical documentation expert and software architect. "
-            "Analyze code, documentation, and technical processes with deep expertise. "
-            "Provide detailed technical insights, best practices, and architectural "
-            "recommendations. Use precise technical terminology and cite specific "
-            "documentation when available. If information is missing, clearly state "
-            "what additional context would be helpful."
+            "You are a senior technical documentation expert and software "
+            "architect. Analyze code, documentation, and technical processes "
+            "with deep expertise. Provide detailed technical insights, best "
+            "practices, and architectural recommendations. Use precise "
+            "technical terminology and cite specific documentation when "
+            "available. If information is missing, clearly state what "
+            "additional context would be helpful."
         ),
         'auditor': (
-            "You are an experienced compliance auditor and risk assessment expert. "
-            "Focus on control effectiveness, risk mitigation, and regulatory compliance. "
-            "Provide thorough analysis of controls, identify gaps, and recommend "
-            "remediation actions. Structure responses with clear findings, evidence, "
-            "and actionable recommendations. Maintain professional audit documentation "
+            "You are an experienced compliance auditor and risk assessment "
+            "expert. Focus on control effectiveness, risk mitigation, and "
+            "regulatory compliance. Provide thorough analysis of controls, "
+            "identify gaps, and recommend remediation actions. Structure "
+            "responses with clear findings, evidence, and actionable "
+            "recommendations. Maintain professional audit documentation "
             "standards."
         ),
         'developer': (
             "You are an expert software developer and DevOps engineer. "
-            "Provide practical code solutions, debugging assistance, and best practices "
-            "for software development. Focus on code quality, performance, security, "
-            "and maintainability. Use code examples when helpful and explain complex "
-            "concepts clearly. Reference documentation and industry standards."
+            "Provide practical code solutions, debugging assistance, and best "
+            "practices for software development. Focus on code quality, "
+            "performance, security, and maintainability. Use code examples "
+            "when helpful and explain complex concepts clearly. Reference "
+            "documentation and industry standards."
         ),
         'analyst': (
             "You are a business analyst and process improvement consultant. "
-            "Analyze workflows, identify inefficiencies, and recommend optimizations. "
-            "Provide structured analysis with clear problem statements, root causes, "
-            "and actionable solutions. Use data-driven insights and reference best "
-            "practices in process management."
+            "Analyze workflows, identify inefficiencies, and recommend "
+            "optimizations. Provide structured analysis with clear problem "
+            "statements, root causes, and actionable solutions. Use "
+            "data-driven insights and reference best practices in process "
+            "management."
         ),
         'educator': (
             "You are an experienced technical educator and mentor. "
-            "Explain concepts clearly and progressively, adapting to different "
-            "knowledge levels. Use examples, analogies, and step-by-step breakdowns. "
-            "Encourage learning by asking clarifying questions and suggesting "
-            "additional resources. Make complex topics accessible and engaging."
+            "Explain concepts clearly and progressively, adapting to "
+            "different knowledge levels. Use examples, analogies, and "
+            "step-by-step breakdowns. Encourage learning by asking "
+            "clarifying questions and suggesting additional resources. "
+            "Make complex topics accessible and engaging."
         )
     }
     
@@ -132,7 +148,10 @@ class Config:
             if ext.lower() in valid_extensions:
                 return True
             else:
-                logger.warning(f"Logo file {logo_path} has unsupported format. Use: {valid_extensions}")
+                logger.warning(
+                    f"Logo file {logo_path} has unsupported format. "
+                    f"Use: {valid_extensions}"
+                )
                 return False
         else:
             logger.warning(f"Logo file not found: {logo_path}")
@@ -144,26 +163,45 @@ class Config:
         errors = []
         
         if not Config.GEMINI_API_KEY:
-            errors.append("GEMINI_API_KEY is not set. Please add it to your .env file.")
+            errors.append(
+                "GEMINI_API_KEY is not set. Please add it to your .env file."
+            )
         
         if not Config.GITHUB_TOKEN:
-            logger.warning("GITHUB_TOKEN is not set. GitHub features will be limited.")
+            logger.warning(
+                "GITHUB_TOKEN is not set. GitHub features will be limited."
+            )
         
         if not Config.GITHUB_REPO_URL:
-            logger.warning("GITHUB_REPO_URL is not set. Please configure it to use GitHub features.")
+            logger.warning(
+                "GITHUB_REPO_URL is not set. Please configure it to use "
+                "GitHub features."
+            )
         
         # Validate brand color format
         if not Config.validate_color_format(Config.BRAND_COLOR):
-            errors.append(f"BRAND_COLOR '{Config.BRAND_COLOR}' is not a valid hex color (format: #RRGGBB)")
+            errors.append(
+                f"BRAND_COLOR '{Config.BRAND_COLOR}' is not a valid hex "
+                f"color (format: #RRGGBB)"
+            )
         
         # Validate logo path if provided
-        if Config.DOCUMENT_LOGO_PATH and not Config.validate_logo_path(Config.DOCUMENT_LOGO_PATH):
-            logger.warning(f"DOCUMENT_LOGO_PATH is set but invalid. Logo will be skipped.")
+        if (Config.DOCUMENT_LOGO_PATH and
+                not Config.validate_logo_path(Config.DOCUMENT_LOGO_PATH)):
+            logger.warning(
+                "DOCUMENT_LOGO_PATH is set but invalid. "
+                "Logo will be skipped."
+            )
         
         # Validate template type
-        valid_templates = {'sox_audit', 'mlops_workflow', 'devops_pipeline', 'generic'}
+        valid_templates = {
+            'sox_audit', 'mlops_workflow', 'devops_pipeline', 'generic'
+        }
         if Config.DEFAULT_TEMPLATE_TYPE not in valid_templates:
-            logger.warning(f"DEFAULT_TEMPLATE_TYPE '{Config.DEFAULT_TEMPLATE_TYPE}' not recognized. Using 'generic'.")
+            logger.warning(
+                f"DEFAULT_TEMPLATE_TYPE '{Config.DEFAULT_TEMPLATE_TYPE}' "
+                f"not recognized. Using 'generic'."
+            )
             Config.DEFAULT_TEMPLATE_TYPE = 'generic'
         
         if errors:
@@ -188,7 +226,9 @@ class Config:
         
         # Use template from config
         template = Config.SYSTEM_PROMPT_TEMPLATE
-        return Config.SYSTEM_PROMPTS.get(template, Config.SYSTEM_PROMPTS['default'])
+        return Config.SYSTEM_PROMPTS.get(
+            template, Config.SYSTEM_PROMPTS['default']
+        )
     
     @staticmethod
     def get_available_prompts():
