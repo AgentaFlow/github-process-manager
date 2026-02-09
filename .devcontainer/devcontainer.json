@@ -1,8 +1,25 @@
 {
   "name": "GitHub Process Manager",
-  "dockerComposeFile": "../docker-compose.yml",
-  "service": "app",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
   "workspaceFolder": "/app",
+
+  // Mount the workspace folder
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/app,type=bind,consistency=cached",
+    "source=github-process-manager-chroma,target=/app/chroma_db,type=volume",
+    "source=github-process-manager-uploads,target=/app/uploads,type=volume",
+    "source=github-process-manager-reports,target=/app/generated_reports,type=volume"
+  ],
+
+  // Run arguments
+  "runArgs": [
+    "--name=github-process-manager-devcontainer",
+    "-e", "FLASK_ENV=development",
+    "-e", "FLASK_DEBUG=True"
+  ],
 
   // Configure VS Code settings
   "customizations": {
